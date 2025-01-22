@@ -39,19 +39,82 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
   }, [onTextSelect]);
 
   const highlightContent = (content: string) => {
-    // Sort flags by start offset in descending order
-    const sortedFlags = [...flags].sort((a, b) => b.startOffset - a.startOffset);
+    // Split content into text and HTML tags
+    const tokens: { type: 'text' | 'tag'; content: string; }[] = [];
+    let currentPos = 0;
+    const tagRegex = /<[^>]+>/g;
+    let match;
 
-    // Create highlighted spans
-    sortedFlags.forEach(flag => {
-      const prefix = content.substring(0, flag.startOffset);
-      const highlighted = content.substring(flag.startOffset, flag.endOffset);
-      const suffix = content.substring(flag.endOffset);
+    while ((match = tagRegex.exec(content)) !== null) {
+      if (match.index > currentPos) {
+        tokens.push({ 
+          type: 'text', 
+          content: content.slice(currentPos, match.index) 
+        });
+      }
+      tokens.push({ type: 'tag', content: match[0] });
+      currentPos = match.index + match[0].length;
+    }
 
-      content = `${prefix}<span style="background-color: ${flag.color}20; border-bottom: 2px solid ${flag.color}">${highlighted}</span>${suffix}`;
-    });
+    if (currentPos < content.length) {
+      tokens.push({ 
+        type: 'text', 
+        content: content.slice(currentPos) 
+      });
+    }
 
-    return content;
+    // Sort flags by start offset in ascending order
+    const sortedFlags = [...flags].sort((a, b) => a.startOffset - b.startOffset);
+
+    // Apply highlights only to text tokens
+    let currentOffset = 0;
+    return tokens.map(token => {
+      if (token.type === 'tag') {
+        return token.content;
+      }
+
+      const text = token.content;
+      const segments: { text: string; color?: string }[] = [{ text }];
+
+      sortedFlags.forEach(flag => {
+        const relativeStart = flag.startOffset - currentOffset;
+        const relativeEnd = flag.endOffset - currentOffset;
+
+        if (relativeStart < text.length && relativeEnd > 0) {
+          const start = Math.max(0, relativeStart);
+          const end = Math.min(text.length, relativeEnd);
+
+          if (start < end) {
+            // Split the affected segment
+            const affectedSegmentIndex = segments.findIndex(seg => 
+              !seg.color || seg.color === flag.color
+            );
+
+            if (affectedSegmentIndex !== -1) {
+              const segment = segments[affectedSegmentIndex];
+              const before = segment.text.slice(0, start);
+              const middle = segment.text.slice(start, end);
+              const after = segment.text.slice(end);
+
+              segments.splice(affectedSegmentIndex, 1);
+              if (before) segments.splice(affectedSegmentIndex, 0, { text: before });
+              segments.splice(affectedSegmentIndex + (before ? 1 : 0), 0, { 
+                text: middle, 
+                color: flag.color 
+              });
+              if (after) segments.splice(affectedSegmentIndex + (before ? 2 : 1), 0, { text: after });
+            }
+          }
+        }
+      });
+
+      currentOffset += text.length;
+      return segments.map(segment => 
+        segment.color
+          ? `<span style="background-color: ${segment.color}20; border-bottom: 2px solid ${segment.color}">${segment.text}</span>`
+          : segment.text
+      ).join('');
+    }).join('');
   };
 
   if (documentLoading || flagsLoading || !document) {
