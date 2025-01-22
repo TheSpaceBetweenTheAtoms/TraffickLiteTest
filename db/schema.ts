@@ -27,3 +27,15 @@ export type InsertDocument = typeof documents.$inferInsert;
 export type SelectDocument = typeof documents.$inferSelect;
 export type InsertFlag = typeof flags.$inferInsert;
 export type SelectFlag = typeof flags.$inferSelect;
+
+// Sample document content for seeding
+export const sampleDocument = `
+<h1>Sample Document</h1>
+<p>This is a sample document for testing the document review tool. You can select text in this document and flag it with different colors.</p>
+<p>Try selecting some text and using the floating toolbar to add flags. You can use:</p>
+<ul>
+    <li>Red flags for critical issues</li>
+    <li>Yellow flags for warnings or concerns</li>
+    <li>Green flags for positive notes or approved sections</li>
+</ul>
+`;

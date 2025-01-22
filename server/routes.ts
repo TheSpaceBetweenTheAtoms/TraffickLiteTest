@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { documents, flags } from "@db/schema";
+import { documents, flags, sampleDocument } from "@db/schema";
 import { eq } from "drizzle-orm";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { stringify } from "csv-stringify/sync";
@@ -9,9 +9,18 @@ import PDFDocument from "pdfkit";
 
 export function registerRoutes(app: Express): Server {
   app.get("/api/documents/:id", async (req, res) => {
-    const document = await db.query.documents.findFirst({
+    let document = await db.query.documents.findFirst({
       where: eq(documents.id, parseInt(req.params.id)),
     });
+
+    // If document doesn't exist, create it with sample content
+    if (!document) {
+      const [newDocument] = await db.insert(documents)
+        .values({ content: sampleDocument })
+        .returning();
+      document = newDocument;
+    }
+
     if (!document) return res.status(404).json({ message: "Document not found" });
     res.json(document);
   });
