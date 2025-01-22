@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -12,6 +12,7 @@ interface DocumentViewerProps {
 
 export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<string>("");
   const { toast } = useToast();
 
   const { data: document, isLoading: documentLoading, error: documentError } = useQuery<SelectDocument>({
@@ -26,125 +27,151 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
     retry: 1,
   });
 
+  // Update content reference when document changes
   useEffect(() => {
-    if (!document?.content) return;
+    if (document?.content) {
+      contentRef.current = document.content;
+    }
+  }, [document?.content]);
+
+  useEffect(() => {
+    if (!containerRef.current || !document?.content) return;
+
+    const container = containerRef.current;
 
     const handleSelection = () => {
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0) return;
 
       const range = selection.getRangeAt(0);
-      if (!range.toString().trim()) return;
+      if (!container.contains(range.commonAncestorContainer)) return;
 
-      const container = containerRef.current;
-      if (!container || !container.contains(range.commonAncestorContainer)) return;
-
-      // Get the normalized text content
-      const tempDiv = window.document.createElement('div');
-      tempDiv.innerHTML = document.content;
-      const fullText = tempDiv.textContent || '';
-
-      // Get the exact selected text
       const selectedText = range.toString().trim();
       if (!selectedText) return;
 
-      // Walk through text nodes to find exact position
-      let currentPos = 0;
-      let startOffset = -1;
-      const walker = window.document.createTreeWalker(
+      // Get text content without HTML tags
+      const textContent = container.textContent || '';
+
+      // Calculate the actual offset by traversing text nodes
+      let currentOffset = 0;
+      let foundStart = false;
+      let startOffset = 0;
+
+      const walker = document.createTreeWalker(
         container,
         NodeFilter.SHOW_TEXT,
         null
       );
 
       let node;
-      let startNode = false;
       while ((node = walker.nextNode() as Text)) {
-        const nodeText = node.textContent || '';
-
         if (node === range.startContainer) {
-          startNode = true;
-          startOffset = currentPos + range.startOffset;
-
-          // Get the actual text at this position
-          const textAtPos = fullText.substring(startOffset).trim();
-          if (textAtPos.startsWith(selectedText)) {
-            // Found exact match
-            const endOffset = startOffset + selectedText.length;
-            onTextSelect(selectedText, startOffset, endOffset);
-            return;
-          }
+          startOffset = currentOffset + range.startOffset;
+          foundStart = true;
+          break;
         }
-
-        if (!startNode) {
-          currentPos += nodeText.length;
-        }
+        currentOffset += node.textContent?.length || 0;
       }
 
-      // If exact match not found, try fuzzy matching as fallback
-      const fuzzyIndex = fullText.indexOf(selectedText);
-      if (fuzzyIndex !== -1) {
-        onTextSelect(selectedText, fuzzyIndex, fuzzyIndex + selectedText.length);
+      if (foundStart) {
+        // Verify text and check for overlaps
+        const textAtPosition = textContent.substring(startOffset, startOffset + selectedText.length);
+
+        if (textAtPosition === selectedText) {
+          // Check for overlapping flags
+          const hasOverlap = flags.some(flag => 
+            (startOffset < flag.endOffset && startOffset + selectedText.length > flag.startOffset)
+          );
+
+          if (hasOverlap) {
+            toast({
+              title: "Selection Error",
+              description: "Selected text overlaps with existing highlights",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          onTextSelect(selectedText, startOffset, startOffset + selectedText.length);
+        }
       }
     };
 
-    window.document.addEventListener("mouseup", handleSelection);
-    return () => window.document.removeEventListener("mouseup", handleSelection);
-  }, [document?.content, onTextSelect]);
+    container.addEventListener('mouseup', handleSelection);
+    return () => container.removeEventListener('mouseup', handleSelection);
+  }, [document?.content, flags, onTextSelect, toast]);
 
-  const escapeHtml = (str: string) => {
-    const div = window.document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  };
+  const renderContent = () => {
+    if (!document?.content) return '';
 
-  const processContent = (content: string) => {
-    if (!content) return '';
+    let html = document.content;
+    const sortedFlags = [...flags].sort((a, b) => b.startOffset - a.startOffset);
 
-    // Create segments for highlighting
-    type Segment = { start: number; end: number; color: string };
-    const segments: Segment[] = [];
+    // Create a temporary container to work with the HTML
+    const tempContainer = document.createElement('div');
+    tempContainer.innerHTML = html;
 
-    // Sort flags by start offset for consistent rendering
-    const sortedFlags = [...flags].sort((a, b) => a.startOffset - b.startOffset);
-
-    // Create non-overlapping segments
+    // Apply highlights from end to start
     for (const flag of sortedFlags) {
-      segments.push({
-        start: flag.startOffset,
-        end: flag.endOffset,
-        color: flag.color
-      });
+      const walker = document.createTreeWalker(
+        tempContainer,
+        NodeFilter.SHOW_TEXT,
+        null
+      );
+
+      let currentPos = 0;
+      let startNode = null;
+      let startOffset = 0;
+      let endNode = null;
+      let endOffset = 0;
+      let node;
+
+      // Find the nodes containing our highlight boundaries
+      while ((node = walker.nextNode() as Text)) {
+        const nodeLength = node.length;
+        const nodeEndPos = currentPos + nodeLength;
+
+        if (!startNode && flag.startOffset >= currentPos && flag.startOffset < nodeEndPos) {
+          startNode = node;
+          startOffset = flag.startOffset - currentPos;
+        }
+
+        if (!endNode && flag.endOffset > currentPos && flag.endOffset <= nodeEndPos) {
+          endNode = node;
+          endOffset = flag.endOffset - currentPos;
+          break;
+        }
+
+        currentPos += nodeLength;
+      }
+
+      // Apply the highlight if we found both boundaries
+      if (startNode && endNode) {
+        try {
+          const range = document.createRange();
+          range.setStart(startNode, startOffset);
+          range.setEnd(endNode, endOffset);
+
+          const highlightEl = document.createElement('mark');
+          highlightEl.style.backgroundColor = `${flag.color}20`;
+          highlightEl.style.boxShadow = `inset 0 -2px 0 ${flag.color}`;
+          highlightEl.style.borderRadius = '2px';
+          highlightEl.style.padding = '2px';
+          highlightEl.style.margin = '-2px';
+          highlightEl.style.display = 'inline-block';
+          highlightEl.className = 'highlight-mark';
+
+          // Only wrap if the range is valid
+          if (range.toString().trim() === flag.text) {
+            range.surroundContents(highlightEl);
+          }
+        } catch (error) {
+          console.error('Failed to apply highlight:', error);
+        }
+      }
     }
 
-    // Build the HTML with highlights
-    let result = '';
-    let currentPos = 0;
-
-    for (const segment of segments) {
-      // Add text before highlight
-      const beforeText = content.substring(currentPos, segment.start);
-      result += escapeHtml(beforeText);
-
-      // Add highlighted text
-      const highlightedText = content.substring(segment.start, segment.end);
-      const escapedHighlightedText = escapeHtml(highlightedText);
-
-      result += `<mark class="relative inline-block" style="
-        background-color: ${segment.color}20;
-        box-shadow: inset 0 -2px 0 ${segment.color};
-        padding: 2px;
-        margin: -2px;
-        border-radius: 2px;
-      ">${escapedHighlightedText}</mark>`;
-
-      currentPos = segment.end;
-    }
-
-    // Add remaining text
-    result += escapeHtml(content.substring(currentPos));
-
-    return result;
+    return tempContainer.innerHTML;
   };
 
   if (documentError || flagsError) {
@@ -174,7 +201,7 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
     <div 
       ref={containerRef}
       className="prose prose-sm max-w-none relative selection:bg-blue-200"
-      dangerouslySetInnerHTML={{ __html: processContent(document.content) }}
+      dangerouslySetInnerHTML={{ __html: renderContent() }}
     />
   );
 }
