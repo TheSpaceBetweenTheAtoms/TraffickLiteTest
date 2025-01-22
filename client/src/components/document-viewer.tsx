@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import type { SelectDocument, SelectFlag } from "@db/schema";
+import { useToast } from "@/hooks/use-toast";
 
 interface DocumentViewerProps {
   onTextSelect: (text: string, start: number, end: number) => void;
@@ -11,6 +12,7 @@ interface DocumentViewerProps {
 
 export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const { data: document, isLoading: documentLoading, error: documentError } = useQuery<SelectDocument>({
     queryKey: ["/api/documents/1"],
@@ -37,57 +39,52 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
       const container = containerRef.current;
       if (!container || !container.contains(range.commonAncestorContainer)) return;
 
-      // Get the full document content as plain text
+      // Get the normalized text content
       const tempDiv = window.document.createElement('div');
       tempDiv.innerHTML = document.content;
       const fullText = tempDiv.textContent || '';
 
-      // Calculate offsets in the original text content
-      let currentOffset = 0;
-      let startOffset = -1;
-      let endOffset = -1;
+      // Get the exact selected text
+      const selectedText = range.toString().trim();
+      if (!selectedText) return;
 
-      // Get all text nodes in the container
-      const textNodes: Text[] = [];
-      const treeWalker = window.document.createTreeWalker(
+      // Walk through text nodes to find exact position
+      let currentPos = 0;
+      let startOffset = -1;
+      const walker = window.document.createTreeWalker(
         container,
         NodeFilter.SHOW_TEXT,
         null
       );
 
-      let node: Text | null;
-      while ((node = treeWalker.nextNode() as Text)) {
-        textNodes.push(node);
-      }
-
-      // Find the start and end offsets
-      for (let i = 0; i < textNodes.length; i++) {
-        const node = textNodes[i];
-        const nodeLength = node.textContent?.length || 0;
+      let node;
+      let startNode = false;
+      while ((node = walker.nextNode() as Text)) {
+        const nodeText = node.textContent || '';
 
         if (node === range.startContainer) {
-          startOffset = currentOffset + range.startOffset;
+          startNode = true;
+          startOffset = currentPos + range.startOffset;
+
+          // Get the actual text at this position
+          const textAtPos = fullText.substring(startOffset).trim();
+          if (textAtPos.startsWith(selectedText)) {
+            // Found exact match
+            const endOffset = startOffset + selectedText.length;
+            onTextSelect(selectedText, startOffset, endOffset);
+            return;
+          }
         }
-        if (node === range.endContainer) {
-          endOffset = currentOffset + range.endOffset;
-          break;
+
+        if (!startNode) {
+          currentPos += nodeText.length;
         }
-        currentOffset += nodeLength;
       }
 
-      if (startOffset === -1 || endOffset === -1) return;
-
-      // Get the actual selected text from the full content
-      const selectedText = fullText.substring(startOffset, endOffset).trim();
-      const rangeText = range.toString().trim();
-
-      // Only proceed if the texts match exactly
-      if (selectedText === rangeText && selectedText.length > 0) {
-        // Adjust offsets to match the trimmed text
-        const finalStartOffset = fullText.indexOf(selectedText, startOffset);
-        const finalEndOffset = finalStartOffset + selectedText.length;
-
-        onTextSelect(selectedText, finalStartOffset, finalEndOffset);
+      // If exact match not found, try fuzzy matching as fallback
+      const fuzzyIndex = fullText.indexOf(selectedText);
+      if (fuzzyIndex !== -1) {
+        onTextSelect(selectedText, fuzzyIndex, fuzzyIndex + selectedText.length);
       }
     };
 
@@ -95,28 +92,57 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
     return () => window.document.removeEventListener("mouseup", handleSelection);
   }, [document?.content, onTextSelect]);
 
+  const escapeHtml = (str: string) => {
+    const div = window.document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  };
+
   const processContent = (content: string) => {
     if (!content) return '';
 
-    // Sort flags by start offset in descending order to avoid offset issues
-    const sortedFlags = [...flags].sort((a, b) => b.startOffset - a.startOffset);
+    // Create segments for highlighting
+    type Segment = { start: number; end: number; color: string };
+    const segments: Segment[] = [];
 
-    let result = content;
-    sortedFlags.forEach(flag => {
-      const before = result.substring(0, flag.startOffset);
-      const highlighted = result.substring(flag.startOffset, flag.endOffset);
-      const after = result.substring(flag.endOffset);
+    // Sort flags by start offset for consistent rendering
+    const sortedFlags = [...flags].sort((a, b) => a.startOffset - b.startOffset);
 
-      const highlightedSpan = `<span class="relative inline-block" style="
-        background-color: ${flag.color}20;
-        box-shadow: inset 0 -2px 0 ${flag.color};
-        padding: 1px 2px;
-        margin: -1px -2px;
+    // Create non-overlapping segments
+    for (const flag of sortedFlags) {
+      segments.push({
+        start: flag.startOffset,
+        end: flag.endOffset,
+        color: flag.color
+      });
+    }
+
+    // Build the HTML with highlights
+    let result = '';
+    let currentPos = 0;
+
+    for (const segment of segments) {
+      // Add text before highlight
+      const beforeText = content.substring(currentPos, segment.start);
+      result += escapeHtml(beforeText);
+
+      // Add highlighted text
+      const highlightedText = content.substring(segment.start, segment.end);
+      const escapedHighlightedText = escapeHtml(highlightedText);
+
+      result += `<mark class="relative inline-block" style="
+        background-color: ${segment.color}20;
+        box-shadow: inset 0 -2px 0 ${segment.color};
+        padding: 2px;
+        margin: -2px;
         border-radius: 2px;
-      ">${highlighted}</span>`;
+      ">${escapedHighlightedText}</mark>`;
 
-      result = before + highlightedSpan + after;
-    });
+      currentPos = segment.end;
+    }
+
+    // Add remaining text
+    result += escapeHtml(content.substring(currentPos));
 
     return result;
   };

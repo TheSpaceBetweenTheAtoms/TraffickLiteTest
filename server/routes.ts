@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { documents, flags, sampleDocument } from "@db/schema";
-import { eq, and, or } from "drizzle-orm";
+import { eq, and, or, gt, lt, gte, lte } from "drizzle-orm";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { stringify } from "csv-stringify/sync";
 import { parse } from "csv-parse/sync";
@@ -37,26 +37,21 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/documents/:id/flags", async (req, res) => {
     const { text, color, startOffset, endOffset } = req.body;
 
-    // Enhance overlap detection to be more precise
     const existingFlags = await db.query.flags.findMany({
       where: and(
         eq(flags.documentId, parseInt(req.params.id)),
         or(
           and(
-            eq(flags.startOffset, startOffset),
-            eq(flags.endOffset, endOffset)
+            lte(flags.startOffset, startOffset),
+            gt(flags.endOffset, startOffset)
           ),
           and(
-            flags.startOffset <= startOffset,
-            flags.endOffset > startOffset
+            lt(flags.startOffset, endOffset),
+            gte(flags.endOffset, endOffset)
           ),
           and(
-            flags.startOffset < endOffset,
-            flags.endOffset >= endOffset
-          ),
-          and(
-            flags.startOffset >= startOffset,
-            flags.endOffset <= endOffset
+            gte(flags.startOffset, startOffset),
+            lte(flags.endOffset, endOffset)
           )
         )
       ),
@@ -64,7 +59,7 @@ export function registerRoutes(app: Express): Server {
 
     if (existingFlags.length > 0) {
       return res.status(400).json({ 
-        message: "Text segment overlaps with existing flags",
+        message: "Selected text overlaps with existing flags",
         overlappingFlags: existingFlags 
       });
     }
