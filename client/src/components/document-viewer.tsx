@@ -25,7 +25,7 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
   });
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!document?.content) return;
 
     const handleSelection = () => {
       const selection = window.getSelection();
@@ -37,65 +37,78 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
       const container = containerRef.current;
       if (!container || !container.contains(range.commonAncestorContainer)) return;
 
-      // Get pure text content (without HTML)
-      const content = container.innerText;
-      const selectionText = range.toString().trim(); // Trim whitespace
+      // Get the full document content as plain text
+      const tempDiv = window.document.createElement('div');
+      tempDiv.innerHTML = document.content;
+      const fullText = tempDiv.textContent || '';
 
-      // Calculate offsets using text content
-      let startOffset = 0;
-      const walker = window.document.createTreeWalker(
+      // Get selected text and normalize whitespace
+      const selectedText = range.toString().trim();
+      if (!selectedText) return;
+
+      // Calculate offsets by walking through text nodes
+      let currentOffset = 0;
+      let startOffset = -1;
+      const treeWalker = window.document.createTreeWalker(
         container,
         NodeFilter.SHOW_TEXT,
         null
       );
 
-      let node = walker.nextNode();
+      let node = treeWalker.nextNode();
       while (node) {
+        const nodeText = node.textContent || '';
+
         if (node === range.startContainer) {
-          startOffset += range.startOffset;
+          startOffset = currentOffset + range.startOffset;
+          // Find the actual text start by skipping whitespace
+          while (startOffset < currentOffset + nodeText.length && 
+                 /\s/.test(fullText[startOffset])) {
+            startOffset++;
+          }
           break;
         }
-        startOffset += (node.textContent?.length || 0);
-        node = walker.nextNode();
+
+        currentOffset += nodeText.length;
+        node = treeWalker.nextNode();
       }
 
-      // Adjust start offset to exclude leading whitespace
-      while (content[startOffset] === ' ' || content[startOffset] === '\n') {
-        startOffset++;
-      }
+      if (startOffset === -1) return;
 
-      const endOffset = startOffset + selectionText.length;
-      onTextSelect(selectionText, startOffset, endOffset);
+      const endOffset = startOffset + selectedText.length;
+
+      // Verify the selection
+      const extractedText = fullText.substring(startOffset, endOffset).trim();
+      if (extractedText === selectedText) {
+        onTextSelect(selectedText, startOffset, endOffset);
+      }
     };
 
     window.document.addEventListener("mouseup", handleSelection);
     return () => window.document.removeEventListener("mouseup", handleSelection);
-  }, [onTextSelect]);
+  }, [document?.content, onTextSelect]);
 
   const processContent = (content: string) => {
-    // Sort flags by start offset in ascending order
-    const sortedFlags = [...flags].sort((a, b) => a.startOffset - b.startOffset);
+    if (!content) return '';
+
+    // Sort flags by start offset in descending order to avoid offset issues
+    const sortedFlags = [...flags].sort((a, b) => b.startOffset - a.startOffset);
 
     let result = content;
-    let offset = 0;
-
-    // Apply highlights one by one
     sortedFlags.forEach(flag => {
-      const start = flag.startOffset + offset;
-      const end = flag.endOffset + offset;
-      const before = result.substring(0, start);
-      const highlighted = result.substring(start, end);
-      const after = result.substring(end);
+      const before = result.substring(0, flag.startOffset);
+      const highlighted = result.substring(flag.startOffset, flag.endOffset);
+      const after = result.substring(flag.endOffset);
 
-      // Improved highlight styling with better text alignment
-      const highlightedSpan = `<span class="relative inline bg-opacity-20" style="
+      const highlightedSpan = `<span class="relative inline-block" style="
         background-color: ${flag.color}20;
         box-shadow: inset 0 -2px 0 ${flag.color};
-        padding-bottom: 2px;
+        padding: 1px 2px;
+        margin: -1px -2px;
+        border-radius: 2px;
       ">${highlighted}</span>`;
 
       result = before + highlightedSpan + after;
-      offset += highlightedSpan.length - highlighted.length;
     });
 
     return result;
