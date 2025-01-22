@@ -14,6 +14,7 @@ A professional-grade web-based document review application designed to enhance t
 - 📥 **Import Support**: Import flags from CSV files
 - 🎨 **Visual Highlighting**: Clear visual indicators for flagged text with color coding
 - 📱 **Responsive Design**: Works seamlessly on desktop and mobile devices
+- 📎 **MS Word Integration**: Direct integration with Microsoft Word (coming soon)
 
 ## Tech Stack
 
@@ -26,28 +27,80 @@ A professional-grade web-based document review application designed to enhance t
   - `csv-parse/stringify` for CSV handling
   - `pdfkit` for PDF generation
 
-## Getting Started
+## Installation
 
 ### Prerequisites
 
-- Node.js 18 or higher
-- PostgreSQL database
+1. Node.js 18 or higher
+2. PostgreSQL database
+3. Git
 
-### Installation
+### Step-by-Step Installation
 
-1. Clone the repository
+1. Clone the repository:
+   ```bash
+   git clone <your-repo-url>
+   cd document-review-app
+   ```
+
 2. Install dependencies:
    ```bash
    npm install
    ```
-3. Set up the database:
+
+3. Set up environment variables:
+   Create a `.env` file in the root directory with:
+   ```
+   DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<database>
+   ```
+
+4. Set up the database:
    ```bash
    npm run db:push
    ```
-4. Start the development server:
+
+5. Start the development server:
    ```bash
    npm run dev
    ```
+
+6. Access the application:
+   Open `http://localhost:5000` in your browser
+
+### Production Deployment
+
+1. Build the application:
+   ```bash
+   npm run build
+   ```
+
+2. Start the production server:
+   ```bash
+   npm start
+   ```
+
+## MS Word Integration (Coming Soon)
+
+The application will support direct integration with Microsoft Word through:
+
+1. **Word Add-in Integration**:
+   - Import documents directly from Word
+   - Export flags and annotations back to Word
+   - Real-time synchronization with Word documents
+
+2. **Python Bridge** (Alternative Implementation):
+   - A companion Python application that bridges MS Word and the web app
+   - Handles document conversion and synchronization
+   - Supports offline document processing
+
+### Setting up Word Integration
+
+Instructions for setting up Word integration will be provided once the feature is released. The integration will support:
+
+- Document import/export
+- Real-time flag synchronization
+- Version control
+- Collaborative editing
 
 ## Usage Guide
 
@@ -89,6 +142,25 @@ A professional-grade web-based document review application designed to enhance t
 - `npm run build`: Build for production
 - `npm run db:push`: Update database schema
 - `npm run check`: Type-check TypeScript files
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Database Connection Issues**:
+   - Verify PostgreSQL is running
+   - Check DATABASE_URL environment variable
+   - Ensure database user has proper permissions
+
+2. **Build Errors**:
+   - Clear node_modules and reinstall: `rm -rf node_modules && npm install`
+   - Verify Node.js version: `node --version`
+   - Check for TypeScript errors: `npm run check`
+
+3. **Word Integration Issues**:
+   - Verify MS Word is installed and accessible
+   - Check file permissions
+   - Ensure proper version compatibility
 
 ## Contributing
 

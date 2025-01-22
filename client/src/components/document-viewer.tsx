@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import type { SelectDocument, SelectFlag } from "@db/schema";
 
 interface DocumentViewerProps {
@@ -10,14 +12,16 @@ interface DocumentViewerProps {
 export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { data: document, isLoading: documentLoading } = useQuery<SelectDocument>({
+  const { data: document, isLoading: documentLoading, error: documentError } = useQuery<SelectDocument>({
     queryKey: ["/api/documents/1"],
+    retry: 1,
   });
 
-  const { data: flags = [], isLoading: flagsLoading } = useQuery<SelectFlag[]>({
+  const { data: flags = [], isLoading: flagsLoading, error: flagsError } = useQuery<SelectFlag[]>({
     queryKey: ["/api/documents/1/flags"],
     staleTime: 5000,
     refetchInterval: 5000,
+    retry: 1,
   });
 
   useEffect(() => {
@@ -86,6 +90,19 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
 
     return result;
   };
+
+  if (documentError || flagsError) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          {documentError ? "Failed to load document. Please try refreshing the page." : 
+           flagsError ? "Failed to load flags. Some highlights may be missing." : 
+           "An unexpected error occurred."}
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   if (documentLoading || flagsLoading || !document) {
     return (
