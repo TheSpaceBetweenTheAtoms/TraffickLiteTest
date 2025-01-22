@@ -21,6 +21,8 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
   });
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const handleSelection = () => {
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0) return;
@@ -37,28 +39,28 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
 
       // Calculate offsets using text content
       let startOffset = 0;
-      const textWalker = document.createTreeWalker(
+      const walker = window.document.createTreeWalker(
         container,
         NodeFilter.SHOW_TEXT,
         null
       );
 
-      let node: Text | null = textWalker.nextNode() as Text;
+      let node = walker.nextNode();
       while (node) {
         if (node === range.startContainer) {
           startOffset += range.startOffset;
           break;
         }
-        startOffset += node.textContent?.length || 0;
-        node = textWalker.nextNode() as Text;
+        startOffset += (node.textContent?.length || 0);
+        node = walker.nextNode();
       }
 
       const endOffset = startOffset + selectionText.length;
       onTextSelect(selectionText, startOffset, endOffset);
     };
 
-    document.addEventListener("mouseup", handleSelection);
-    return () => document.removeEventListener("mouseup", handleSelection);
+    window.document.addEventListener("mouseup", handleSelection);
+    return () => window.document.removeEventListener("mouseup", handleSelection);
   }, [onTextSelect]);
 
   const processContent = (content: string) => {
