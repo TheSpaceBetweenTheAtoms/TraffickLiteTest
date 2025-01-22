@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { SelectDocument } from "@db/schema";
+import type { SelectDocument, SelectFlag } from "@db/schema";
 
 interface DocumentViewerProps {
   onTextSelect: (text: string, start: number, end: number) => void;
@@ -10,8 +10,12 @@ interface DocumentViewerProps {
 export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { data: document, isLoading } = useQuery<SelectDocument>({
+  const { data: document, isLoading: documentLoading } = useQuery<SelectDocument>({
     queryKey: ["/api/documents/1"],
+  });
+
+  const { data: flags = [], isLoading: flagsLoading } = useQuery<SelectFlag[]>({
+    queryKey: ["/api/documents/1/flags"],
   });
 
   useEffect(() => {
@@ -34,7 +38,22 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
     return () => window.removeEventListener("mouseup", handleSelection);
   }, [onTextSelect]);
 
-  if (isLoading || !document) {
+  const highlightContent = (content: string) => {
+    let result = content;
+    const sortedFlags = [...flags].sort((a, b) => b.startOffset - a.startOffset);
+
+    sortedFlags.forEach(flag => {
+      const before = result.slice(0, flag.startOffset);
+      const highlighted = result.slice(flag.startOffset, flag.endOffset);
+      const after = result.slice(flag.endOffset);
+
+      result = `${before}<span class="flag-highlight" style="background-color: ${flag.color}33; border-bottom: 2px solid ${flag.color}">${highlighted}</span>${after}`;
+    });
+
+    return result;
+  };
+
+  if (documentLoading || flagsLoading || !document) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-4 w-full" />
@@ -48,7 +67,7 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
     <div 
       ref={containerRef}
       className="prose prose-sm max-w-none"
-      dangerouslySetInnerHTML={{ __html: document.content }}
+      dangerouslySetInnerHTML={{ __html: highlightContent(document.content) }}
     />
   );
 }
