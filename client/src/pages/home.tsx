@@ -20,21 +20,23 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background p-4">
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-3">
-          <Card className="p-4 relative min-h-[calc(100vh-2rem)]">
+          <Card className="p-4 relative">
             <DocumentViewer onTextSelect={handleTextSelect} />
-            {selectedText && (
+            {selectedText && selection && (
               <FloatingToolbar
                 selectedText={selectedText}
-                selection={selection!}
+                selection={selection}
                 onClose={clearSelection}
               />
             )}
           </Card>
         </div>
         <div className="lg:col-span-1">
-          <FlagList />
+          <div className="sticky top-4">
+            <FlagList />
+          </div>
         </div>
       </div>
     </div>

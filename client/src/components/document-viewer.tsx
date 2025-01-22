@@ -16,6 +16,8 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
 
   const { data: flags = [], isLoading: flagsLoading } = useQuery<SelectFlag[]>({
     queryKey: ["/api/documents/1/flags"],
+    staleTime: 0,
+    refetchInterval: 1000,
   });
 
   useEffect(() => {
@@ -29,92 +31,58 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
       const container = containerRef.current;
       if (!container || !container.contains(range.commonAncestorContainer)) return;
 
-      const start = range.startOffset;
-      const end = range.endOffset;
-      onTextSelect(range.toString(), start, end);
+      // Get pure text content (without HTML)
+      const content = container.innerText;
+      const selectionText = range.toString();
+
+      // Calculate offsets using text content
+      let startOffset = 0;
+      const textWalker = document.createTreeWalker(
+        container,
+        NodeFilter.SHOW_TEXT,
+        null
+      );
+
+      let node: Text | null = textWalker.nextNode() as Text;
+      while (node) {
+        if (node === range.startContainer) {
+          startOffset += range.startOffset;
+          break;
+        }
+        startOffset += node.textContent?.length || 0;
+        node = textWalker.nextNode() as Text;
+      }
+
+      const endOffset = startOffset + selectionText.length;
+      onTextSelect(selectionText, startOffset, endOffset);
     };
 
-    window.addEventListener("mouseup", handleSelection);
-    return () => window.removeEventListener("mouseup", handleSelection);
+    document.addEventListener("mouseup", handleSelection);
+    return () => document.removeEventListener("mouseup", handleSelection);
   }, [onTextSelect]);
 
-  const highlightContent = (content: string) => {
-    // Split content into text and HTML tags
-    const tokens: { type: 'text' | 'tag'; content: string; }[] = [];
-    let currentPos = 0;
-    const tagRegex = /<[^>]+>/g;
-    let match;
-
-    while ((match = tagRegex.exec(content)) !== null) {
-      if (match.index > currentPos) {
-        tokens.push({ 
-          type: 'text', 
-          content: content.slice(currentPos, match.index) 
-        });
-      }
-      tokens.push({ type: 'tag', content: match[0] });
-      currentPos = match.index + match[0].length;
-    }
-
-    if (currentPos < content.length) {
-      tokens.push({ 
-        type: 'text', 
-        content: content.slice(currentPos) 
-      });
-    }
-
+  const processContent = (content: string) => {
     // Sort flags by start offset in ascending order
     const sortedFlags = [...flags].sort((a, b) => a.startOffset - b.startOffset);
 
-    // Apply highlights only to text tokens
-    let currentOffset = 0;
-    return tokens.map(token => {
-      if (token.type === 'tag') {
-        return token.content;
-      }
+    let result = content;
+    let offset = 0;
 
-      const text = token.content;
-      const segments: { text: string; color?: string }[] = [{ text }];
+    // Apply highlights one by one
+    sortedFlags.forEach(flag => {
+      const start = flag.startOffset + offset;
+      const end = flag.endOffset + offset;
+      const before = result.substring(0, start);
+      const highlighted = result.substring(start, end);
+      const after = result.substring(end);
 
-      sortedFlags.forEach(flag => {
-        const relativeStart = flag.startOffset - currentOffset;
-        const relativeEnd = flag.endOffset - currentOffset;
+      // Use semi-transparent background color for better visibility
+      const highlightedSpan = `<span style="background-color: ${flag.color}20; border-bottom: 2px solid ${flag.color}; padding: 0 1px;">${highlighted}</span>`;
+      result = before + highlightedSpan + after;
+      offset += highlightedSpan.length - highlighted.length;
+    });
 
-        if (relativeStart < text.length && relativeEnd > 0) {
-          const start = Math.max(0, relativeStart);
-          const end = Math.min(text.length, relativeEnd);
-
-          if (start < end) {
-            // Split the affected segment
-            const affectedSegmentIndex = segments.findIndex(seg => 
-              !seg.color || seg.color === flag.color
-            );
-
-            if (affectedSegmentIndex !== -1) {
-              const segment = segments[affectedSegmentIndex];
-              const before = segment.text.slice(0, start);
-              const middle = segment.text.slice(start, end);
-              const after = segment.text.slice(end);
-
-              segments.splice(affectedSegmentIndex, 1);
-              if (before) segments.splice(affectedSegmentIndex, 0, { text: before });
-              segments.splice(affectedSegmentIndex + (before ? 1 : 0), 0, { 
-                text: middle, 
-                color: flag.color 
-              });
-              if (after) segments.splice(affectedSegmentIndex + (before ? 2 : 1), 0, { text: after });
-            }
-          }
-        }
-      });
-
-      currentOffset += text.length;
-      return segments.map(segment => 
-        segment.color
-          ? `<span style="background-color: ${segment.color}20; border-bottom: 2px solid ${segment.color}">${segment.text}</span>`
-          : segment.text
-      ).join('');
-    }).join('');
+    return result;
   };
 
   if (documentLoading || flagsLoading || !document) {
@@ -131,7 +99,7 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
     <div 
       ref={containerRef}
       className="prose prose-sm max-w-none"
-      dangerouslySetInnerHTML={{ __html: highlightContent(document.content) }}
+      dangerouslySetInnerHTML={{ __html: processContent(document.content) }}
     />
   );
 }

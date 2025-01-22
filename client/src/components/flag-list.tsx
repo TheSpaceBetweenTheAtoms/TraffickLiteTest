@@ -22,6 +22,8 @@ export default function FlagList() {
 
   const { data: flags = [], isLoading } = useQuery<SelectFlag[]>({
     queryKey: ["/api/documents/1/flags"],
+    staleTime: 0, // Always fetch fresh data
+    refetchInterval: 1000, // Poll every second
   });
 
   const deleteFlag = useMutation({
@@ -78,7 +80,7 @@ export default function FlagList() {
                 Filter
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
+            <DropdownMenuContent align="end">
               <DropdownMenuCheckboxItem
                 checked={colorFilter.includes("red")}
                 onCheckedChange={(checked) => 
@@ -118,7 +120,7 @@ export default function FlagList() {
                 Export
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
+            <DropdownMenuContent align="end">
               <DropdownMenuCheckboxItem onSelect={() => exportFlags('doc')}>
                 Export as Word (.doc)
               </DropdownMenuCheckboxItem>
