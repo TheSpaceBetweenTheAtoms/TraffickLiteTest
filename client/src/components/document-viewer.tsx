@@ -39,18 +39,53 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
   }, [onTextSelect]);
 
   const highlightContent = (content: string) => {
-    let result = content;
+    // Create a temporary div to parse HTML content
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
+
+    // Sort flags by start offset in descending order to preserve positions
     const sortedFlags = [...flags].sort((a, b) => b.startOffset - a.startOffset);
 
-    sortedFlags.forEach(flag => {
-      const before = result.slice(0, flag.startOffset);
-      const highlighted = result.slice(flag.startOffset, flag.endOffset);
-      const after = result.slice(flag.endOffset);
+    // Process text nodes recursively
+    const processNode = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        let text = node.textContent || '';
+        let currentPos = 0;
 
-      result = `${before}<span class="flag-highlight" style="background-color: ${flag.color}33; border-bottom: 2px solid ${flag.color}">${highlighted}</span>${after}`;
-    });
+        // Apply highlights to text node
+        sortedFlags.forEach(flag => {
+          if (flag.startOffset <= currentPos + text.length && flag.endOffset >= currentPos) {
+            const start = Math.max(0, flag.startOffset - currentPos);
+            const end = Math.min(text.length, flag.endOffset - currentPos);
 
-    return result;
+            if (start < end) {
+              const before = text.slice(0, start);
+              const highlighted = text.slice(start, end);
+              const after = text.slice(end);
+
+              const span = document.createElement('span');
+              span.className = 'flag-highlight';
+              span.style.backgroundColor = `${flag.color}33`;
+              span.style.borderBottom = `2px solid ${flag.color}`;
+              span.textContent = highlighted;
+
+              const fragment = document.createDocumentFragment();
+              if (before) fragment.appendChild(document.createTextNode(before));
+              fragment.appendChild(span);
+              if (after) fragment.appendChild(document.createTextNode(after));
+
+              node.parentNode?.replaceChild(fragment, node);
+            }
+          }
+        });
+      } else {
+        // Recursively process child nodes
+        Array.from(node.childNodes).forEach(processNode);
+      }
+    };
+
+    processNode(tempDiv);
+    return tempDiv.innerHTML;
   };
 
   if (documentLoading || flagsLoading || !document) {
