@@ -25,8 +25,8 @@ export default function FlagList() {
 
   const { data: flags = [], isLoading } = useQuery<SelectFlag[]>({
     queryKey: ["/api/documents/1/flags"],
-    staleTime: 0,
-    refetchInterval: 1000,
+    staleTime: 5000, // Keep data fresh for 5 seconds
+    refetchInterval: 5000, // Poll every 5 seconds instead of every second
   });
 
   const deleteFlag = useMutation({
@@ -136,8 +136,8 @@ export default function FlagList() {
             <DropdownMenuContent align="end">
               <DropdownMenuCheckboxItem
                 checked={colorFilter.includes("red")}
-                onCheckedChange={(checked) => 
-                  setColorFilter(prev => 
+                onCheckedChange={(checked) =>
+                  setColorFilter(prev =>
                     checked ? [...prev, "red"] : prev.filter(c => c !== "red")
                   )
                 }
@@ -146,8 +146,8 @@ export default function FlagList() {
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={colorFilter.includes("yellow")}
-                onCheckedChange={(checked) => 
-                  setColorFilter(prev => 
+                onCheckedChange={(checked) =>
+                  setColorFilter(prev =>
                     checked ? [...prev, "yellow"] : prev.filter(c => c !== "yellow")
                   )
                 }
@@ -156,8 +156,8 @@ export default function FlagList() {
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={colorFilter.includes("green")}
-                onCheckedChange={(checked) => 
-                  setColorFilter(prev => 
+                onCheckedChange={(checked) =>
+                  setColorFilter(prev =>
                     checked ? [...prev, "green"] : prev.filter(c => c !== "green")
                   )
                 }

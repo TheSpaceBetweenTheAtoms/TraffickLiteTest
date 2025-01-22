@@ -16,8 +16,8 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
 
   const { data: flags = [], isLoading: flagsLoading } = useQuery<SelectFlag[]>({
     queryKey: ["/api/documents/1/flags"],
-    staleTime: 0,
-    refetchInterval: 1000,
+    staleTime: 5000,
+    refetchInterval: 5000,
   });
 
   useEffect(() => {
@@ -78,8 +78,8 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
       const highlighted = result.substring(start, end);
       const after = result.substring(end);
 
-      // Use semi-transparent background color for better visibility
-      const highlightedSpan = `<span style="background-color: ${flag.color}20; border-bottom: 2px solid ${flag.color}; padding: 0 1px;">${highlighted}</span>`;
+      // Use relative positioning to ensure highlights appear in the correct location
+      const highlightedSpan = `<span class="relative inline-block" style="background-color: ${flag.color}20; border-bottom: 2px solid ${flag.color};">${highlighted}</span>`;
       result = before + highlightedSpan + after;
       offset += highlightedSpan.length - highlighted.length;
     });
@@ -100,7 +100,7 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
   return (
     <div 
       ref={containerRef}
-      className="prose prose-sm max-w-none"
+      className="prose prose-sm max-w-none relative"
       dangerouslySetInnerHTML={{ __html: processContent(document.content) }}
     />
   );
