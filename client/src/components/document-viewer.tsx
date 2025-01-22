@@ -39,7 +39,7 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
 
       // Get pure text content (without HTML)
       const content = container.innerText;
-      const selectionText = range.toString();
+      const selectionText = range.toString().trim(); // Trim whitespace
 
       // Calculate offsets using text content
       let startOffset = 0;
@@ -57,6 +57,11 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
         }
         startOffset += (node.textContent?.length || 0);
         node = walker.nextNode();
+      }
+
+      // Adjust start offset to exclude leading whitespace
+      while (content[startOffset] === ' ' || content[startOffset] === '\n') {
+        startOffset++;
       }
 
       const endOffset = startOffset + selectionText.length;
@@ -82,8 +87,13 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
       const highlighted = result.substring(start, end);
       const after = result.substring(end);
 
-      // Use relative positioning to ensure highlights appear in the correct location
-      const highlightedSpan = `<span class="relative inline-block" style="background-color: ${flag.color}20; border-bottom: 2px solid ${flag.color};">${highlighted}</span>`;
+      // Improved highlight styling with better text alignment
+      const highlightedSpan = `<span class="relative inline bg-opacity-20" style="
+        background-color: ${flag.color}20;
+        box-shadow: inset 0 -2px 0 ${flag.color};
+        padding-bottom: 2px;
+      ">${highlighted}</span>`;
+
       result = before + highlightedSpan + after;
       offset += highlightedSpan.length - highlighted.length;
     });
@@ -117,7 +127,7 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
   return (
     <div 
       ref={containerRef}
-      className="prose prose-sm max-w-none relative"
+      className="prose prose-sm max-w-none relative selection:bg-blue-200"
       dangerouslySetInnerHTML={{ __html: processContent(document.content) }}
     />
   );

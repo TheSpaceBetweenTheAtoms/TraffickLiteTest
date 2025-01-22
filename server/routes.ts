@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { documents, flags, sampleDocument } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { stringify } from "csv-stringify/sync";
 import { parse } from "csv-parse/sync";
@@ -37,20 +37,36 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/documents/:id/flags", async (req, res) => {
     const { text, color, startOffset, endOffset } = req.body;
 
-    // Check if this text segment overlaps with any existing flags
+    // Enhance overlap detection to be more precise
     const existingFlags = await db.query.flags.findMany({
-      where: eq(flags.documentId, parseInt(req.params.id)),
+      where: and(
+        eq(flags.documentId, parseInt(req.params.id)),
+        or(
+          and(
+            eq(flags.startOffset, startOffset),
+            eq(flags.endOffset, endOffset)
+          ),
+          and(
+            flags.startOffset <= startOffset,
+            flags.endOffset > startOffset
+          ),
+          and(
+            flags.startOffset < endOffset,
+            flags.endOffset >= endOffset
+          ),
+          and(
+            flags.startOffset >= startOffset,
+            flags.endOffset <= endOffset
+          )
+        )
+      ),
     });
 
-    const hasOverlap = existingFlags.some(
-      flag =>
-        (startOffset >= flag.startOffset && startOffset < flag.endOffset) ||
-        (endOffset > flag.startOffset && endOffset <= flag.endOffset) ||
-        (startOffset <= flag.startOffset && endOffset >= flag.endOffset)
-    );
-
-    if (hasOverlap) {
-      return res.status(400).json({ message: "Text segment already flagged" });
+    if (existingFlags.length > 0) {
+      return res.status(400).json({ 
+        message: "Text segment overlaps with existing flags",
+        overlappingFlags: existingFlags 
+      });
     }
 
     const flag = await db
@@ -71,7 +87,6 @@ export function registerRoutes(app: Express): Server {
     res.status(204).end();
   });
 
-  // New endpoint to clear all flags for a document
   app.delete("/api/documents/:id/flags", async (req, res) => {
     await db.delete(flags).where(eq(flags.documentId, parseInt(req.params.id)));
     res.status(204).end();
