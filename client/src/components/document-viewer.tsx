@@ -42,45 +42,52 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
       tempDiv.innerHTML = document.content;
       const fullText = tempDiv.textContent || '';
 
-      // Get selected text and normalize whitespace
-      const selectedText = range.toString().trim();
-      if (!selectedText) return;
-
-      // Calculate offsets by walking through text nodes
+      // Calculate offsets in the original text content
       let currentOffset = 0;
       let startOffset = -1;
+      let endOffset = -1;
+
+      // Get all text nodes in the container
+      const textNodes: Text[] = [];
       const treeWalker = window.document.createTreeWalker(
         container,
         NodeFilter.SHOW_TEXT,
         null
       );
 
-      let node = treeWalker.nextNode();
-      while (node) {
-        const nodeText = node.textContent || '';
+      let node: Text | null;
+      while ((node = treeWalker.nextNode() as Text)) {
+        textNodes.push(node);
+      }
+
+      // Find the start and end offsets
+      for (let i = 0; i < textNodes.length; i++) {
+        const node = textNodes[i];
+        const nodeLength = node.textContent?.length || 0;
 
         if (node === range.startContainer) {
           startOffset = currentOffset + range.startOffset;
-          // Find the actual text start by skipping whitespace
-          while (startOffset < currentOffset + nodeText.length && 
-                 /\s/.test(fullText[startOffset])) {
-            startOffset++;
-          }
+        }
+        if (node === range.endContainer) {
+          endOffset = currentOffset + range.endOffset;
           break;
         }
-
-        currentOffset += nodeText.length;
-        node = treeWalker.nextNode();
+        currentOffset += nodeLength;
       }
 
-      if (startOffset === -1) return;
+      if (startOffset === -1 || endOffset === -1) return;
 
-      const endOffset = startOffset + selectedText.length;
+      // Get the actual selected text from the full content
+      const selectedText = fullText.substring(startOffset, endOffset).trim();
+      const rangeText = range.toString().trim();
 
-      // Verify the selection
-      const extractedText = fullText.substring(startOffset, endOffset).trim();
-      if (extractedText === selectedText) {
-        onTextSelect(selectedText, startOffset, endOffset);
+      // Only proceed if the texts match exactly
+      if (selectedText === rangeText && selectedText.length > 0) {
+        // Adjust offsets to match the trimmed text
+        const finalStartOffset = fullText.indexOf(selectedText, startOffset);
+        const finalEndOffset = finalStartOffset + selectedText.length;
+
+        onTextSelect(selectedText, finalStartOffset, finalEndOffset);
       }
     };
 

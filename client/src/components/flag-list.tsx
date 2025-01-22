@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, Download, Filter, Upload, X } from "lucide-react";
+import { Trash2, Download, Filter, Upload, X, ArrowDownAZ } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -21,15 +21,19 @@ import {
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { useState, useMemo, useRef } from "react";
 import type { SelectFlag } from "@db/schema";
 
-type SortOrder = "newest" | "oldest" | "text";
+type SortOrder = "newest" | "oldest" | "text" | "document" | "color";
 type ColorFilter = string[];
 
 export default function FlagList() {
-  const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("document");
   const [colorFilter, setColorFilter] = useState<ColorFilter>(["red", "yellow", "green"]);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -112,6 +116,14 @@ export default function FlagList() {
         return filtered.sort((a, b) => a.id - b.id);
       case "text":
         return filtered.sort((a, b) => a.text.localeCompare(b.text));
+      case "document":
+        return filtered.sort((a, b) => a.startOffset - b.startOffset);
+      case "color":
+        return filtered.sort((a, b) => {
+          const colorOrder = { red: 1, yellow: 2, green: 3 };
+          return (colorOrder[a.color as keyof typeof colorOrder] || 0) - 
+                 (colorOrder[b.color as keyof typeof colorOrder] || 0);
+        });
       default:
         return filtered;
     }
@@ -159,6 +171,27 @@ export default function FlagList() {
             <Upload className="h-4 w-4 mr-2" />
             Import
           </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <ArrowDownAZ className="h-4 w-4 mr-2" />
+                Sort
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+              <DropdownMenuRadioGroup value={sortOrder} onValueChange={(value) => setSortOrder(value as SortOrder)}>
+                <DropdownMenuRadioItem value="document">Document Order</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="color">Color Groups</DropdownMenuRadioItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioItem value="newest">Newest First</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="oldest">Oldest First</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="text">Alphabetical</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -167,6 +200,7 @@ export default function FlagList() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Show Colors</DropdownMenuLabel>
               <DropdownMenuCheckboxItem
                 checked={colorFilter.includes("red")}
                 onCheckedChange={(checked) =>
@@ -199,6 +233,7 @@ export default function FlagList() {
               </DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -218,6 +253,7 @@ export default function FlagList() {
               </DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
           <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
             <AlertDialogTrigger asChild>
               <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50">
