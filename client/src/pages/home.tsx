@@ -20,8 +20,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background p-4">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <div className="lg:col-span-3">
+      <div className="max-w-7xl mx-auto grid grid-cols-12 gap-4">
+        <div className="col-span-12 lg:col-span-8">
           <Card className="p-4 relative">
             <DocumentViewer onTextSelect={handleTextSelect} />
             {selectedText && selection && (
@@ -33,10 +33,8 @@ export default function Home() {
             )}
           </Card>
         </div>
-        <div className="lg:col-span-1">
-          <div className="sticky top-4">
-            <FlagList />
-          </div>
+        <div className="col-span-12 lg:col-span-4 lg:h-screen lg:sticky lg:top-0">
+          <FlagList />
         </div>
       </div>
     </div>
