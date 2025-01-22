@@ -31,6 +31,7 @@ type ColorFilter = string[];
 export default function FlagList() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [colorFilter, setColorFilter] = useState<ColorFilter>(["red", "yellow", "green"]);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -65,8 +66,13 @@ export default function FlagList() {
         title: "Success",
         description: "All flags have been cleared",
       });
+      setIsAlertOpen(false);
     },
   });
+
+  const handleClearAll = () => {
+    clearAllFlags.mutate();
+  };
 
   const importFlags = useMutation({
     mutationFn: async (file: File) => {
@@ -212,7 +218,7 @@ export default function FlagList() {
               </DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <AlertDialog>
+          <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
             <AlertDialogTrigger asChild>
               <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50">
                 <X className="h-4 w-4 mr-2" />
@@ -228,7 +234,7 @@ export default function FlagList() {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => clearAllFlags.mutate()}>
+                <AlertDialogAction onClick={handleClearAll}>
                   Clear All
                 </AlertDialogAction>
               </AlertDialogFooter>
