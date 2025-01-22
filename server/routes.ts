@@ -71,6 +71,12 @@ export function registerRoutes(app: Express): Server {
     res.status(204).end();
   });
 
+  // New endpoint to clear all flags for a document
+  app.delete("/api/documents/:id/flags", async (req, res) => {
+    await db.delete(flags).where(eq(flags.documentId, parseInt(req.params.id)));
+    res.status(204).end();
+  });
+
   app.post("/api/documents/:id/import", async (req, res) => {
     const { csv } = req.body;
 
@@ -109,7 +115,7 @@ export function registerRoutes(app: Express): Server {
               new Paragraph({
                 children: [new TextRun("Flagged Text Report")],
               }),
-              ...documentFlags.map(flag => 
+              ...documentFlags.map(flag =>
                 new Paragraph({
                   children: [
                     new TextRun({

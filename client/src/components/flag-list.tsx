@@ -2,9 +2,20 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, Download, Filter, Upload } from "lucide-react";
+import { Trash2, Download, Filter, Upload, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,8 +36,8 @@ export default function FlagList() {
 
   const { data: flags = [], isLoading } = useQuery<SelectFlag[]>({
     queryKey: ["/api/documents/1/flags"],
-    staleTime: 5000, // Keep data fresh for 5 seconds
-    refetchInterval: 5000, // Poll every 5 seconds instead of every second
+    staleTime: 5000,
+    refetchInterval: 5000,
   });
 
   const deleteFlag = useMutation({
@@ -38,6 +49,22 @@ export default function FlagList() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/documents/1/flags"] });
+    },
+  });
+
+  const clearAllFlags = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/documents/1/flags`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to clear flags");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/documents/1/flags"] });
+      toast({
+        title: "Success",
+        description: "All flags have been cleared",
+      });
     },
   });
 
@@ -185,6 +212,28 @@ export default function FlagList() {
               </DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50">
+                <X className="h-4 w-4 mr-2" />
+                Clear All
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear All Flags</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to remove all flags? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => clearAllFlags.mutate()}>
+                  Clear All
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
       <ScrollArea className="h-[calc(100vh-10rem)]">
