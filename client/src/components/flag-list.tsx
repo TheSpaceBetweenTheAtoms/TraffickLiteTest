@@ -117,12 +117,15 @@ export default function FlagList() {
       case "text":
         return filtered.sort((a, b) => a.text.localeCompare(b.text));
       case "document":
+        // Sort by position in document
         return filtered.sort((a, b) => a.startOffset - b.startOffset);
       case "color":
+        // Sort by color groups (red, yellow, green) and then by position within each group
         return filtered.sort((a, b) => {
-          const colorOrder = { red: 1, yellow: 2, green: 3 };
-          return (colorOrder[a.color as keyof typeof colorOrder] || 0) - 
-                 (colorOrder[b.color as keyof typeof colorOrder] || 0);
+          const colorPriority = { red: 0, yellow: 1, green: 2 };
+          const colorDiff = colorPriority[a.color as keyof typeof colorPriority] - 
+                          colorPriority[b.color as keyof typeof colorPriority];
+          return colorDiff === 0 ? a.startOffset - b.startOffset : colorDiff;
         });
       default:
         return filtered;
