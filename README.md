@@ -15,12 +15,24 @@ A professional-grade web-based document review application designed to enhance t
 - 🎨 **Visual Highlighting**: Clear visual indicators for flagged text with color coding
 - 📱 **Responsive Design**: Works seamlessly on desktop and mobile devices
 
-## Quick Installation (Windows)
+## Quick Installation
 
-1. Download the latest release `document-review-app-installer.exe` from the releases page
-2. Run the installer and follow the setup wizard
-3. Launch the application from the Start Menu or Desktop shortcut
-4. Access the application at `http://localhost:5000` in your web browser
+1. Download the latest release package from the releases page
+2. Extract the downloaded package to your desired location
+3. Run the `install.bat` file
+4. Follow the deployment wizard prompts:
+   - The wizard will check for Node.js installation
+   - Enter your PostgreSQL database connection details
+   - Choose a port for the application (default: 5000)
+   - The wizard will automatically:
+     - Set up environment variables
+     - Install dependencies
+     - Initialize the database
+     - Prepare the application for first use
+5. Once installation is complete, you can:
+   - Start the development server: `npm run dev`
+   - Build and start in production: `npm run build && npm start`
+   - Access the application at: `http://localhost:<your-chosen-port>`
 
 ## Manual Installation
 
@@ -74,55 +86,6 @@ A professional-grade web-based document review application designed to enhance t
    npm start
    ```
 
-## Creating Installation Package
-
-To create an installation package for distribution:
-
-1. Install the packaging dependencies:
-   ```bash
-   npm install -g @vercel/ncc pkg
-   ```
-
-2. Bundle the application:
-   ```bash
-   # Bundle frontend
-   npm run build
-
-   # Bundle backend
-   ncc build server/index.ts -o dist/server
-   ```
-
-3. Create executable:
-   ```bash
-   pkg . --targets node18-win-x64 --output document-review-app.exe
-   ```
-
-4. Package with dependencies:
-   ```bash
-   # Run the packaging script
-   node scripts/create-installer.js
-   ```
-
-The installer will be created in the `dist` directory as `document-review-app-installer.exe`
-
-## Usage Guide
-
-### Flagging Text
-
-1. Select any text in the document viewer
-2. Use the floating toolbar to flag the text:
-   - 🔴 Red for critical issues
-   - 🟡 Yellow for warnings or concerns
-   - 🟢 Green for positive notes or approved sections
-
-### Managing Flags
-
-- **Filter Flags**: Use the filter button to show/hide flags by color
-- **Sort Flags**: Sort flags by newest, oldest, or text content
-- **Delete Flags**: Remove individual flags or use "Clear All" to remove all flags
-- **Export Flags**: Export your flags in CSV, PDF, or DOCX format
-- **Import Flags**: Import previously exported flags from CSV files
-
 ## Troubleshooting
 
 ### Common Issues
@@ -132,7 +95,18 @@ The installer will be created in the `dist` directory as `document-review-app-in
    - Check DATABASE_URL environment variable
    - Ensure database user has proper permissions
 
-2. **Build Errors**:
+2. **Port Already in Use**:
+   - The wizard will automatically detect if the default port (5000) is in use
+   - You can specify a different port during installation
+   - Alternatively, check and stop any processes using port 5000
+
+3. **Installation Wizard Errors**:
+   - If the wizard fails, check the error messages displayed
+   - Verify that Node.js is installed correctly
+   - Ensure you have proper permissions to write to the installation directory
+   - Check your database credentials
+
+4. **Build Errors**:
    - Clear node_modules and reinstall: `rm -rf node_modules && npm install`
    - Verify Node.js version: `node --version`
    - Check for TypeScript errors: `npm run check`
