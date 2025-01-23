@@ -17,10 +17,11 @@ A professional-grade web-based document review application designed to enhance t
 
 ## Quick Installation
 
-1. Download the latest release package from the releases page
-2. Extract the downloaded package to your desired location
-3. Run the `install.bat` file
-4. Follow the deployment wizard prompts:
+1. Download the latest release `document-review-app.zip` from the releases page
+2. Extract the zip file to your desired location
+3. Open a command prompt/terminal in the extracted folder
+4. Run the `install.bat` file (Windows) or `node scripts/deployment-wizard.js` (macOS/Linux)
+5. Follow the deployment wizard prompts:
    - The wizard will check for Node.js installation
    - Enter your PostgreSQL database connection details
    - Choose a port for the application (default: 5000)
@@ -29,7 +30,7 @@ A professional-grade web-based document review application designed to enhance t
      - Install dependencies
      - Initialize the database
      - Prepare the application for first use
-5. Once installation is complete, you can:
+6. Once installation is complete, you can:
    - Start the development server: `npm run dev`
    - Build and start in production: `npm run build && npm start`
    - Access the application at: `http://localhost:<your-chosen-port>`
