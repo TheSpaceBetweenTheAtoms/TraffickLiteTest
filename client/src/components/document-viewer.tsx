@@ -14,7 +14,7 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const { data: document, isLoading: documentLoading, error: documentError } = useQuery<SelectDocument>({
+  const { data: documentData, isLoading: documentLoading, error: documentError } = useQuery<SelectDocument>({
     queryKey: ["/api/documents/1"],
     retry: 1,
   });
@@ -27,11 +27,9 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
   });
 
   useEffect(() => {
-    if (!containerRef.current || !document?.content) return;
+    if (!containerRef.current || !documentData?.content) return;
 
     const container = containerRef.current;
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(document.content, 'text/html');
 
     const handleSelection = () => {
       const selection = window.getSelection();
@@ -113,20 +111,20 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
 
     container.addEventListener('mouseup', handleSelection);
     return () => container.removeEventListener('mouseup', handleSelection);
-  }, [document?.content, flags, onTextSelect, toast]);
+  }, [documentData?.content, flags, onTextSelect, toast]);
 
   const renderContent = () => {
-    if (!document?.content) return '';
+    if (!documentData?.content) return '';
 
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(document.content, 'text/html');
+    const div = window.document.createElement('div');
+    div.innerHTML = documentData.content;
     const sortedFlags = [...flags].sort((a, b) => b.startOffset - a.startOffset);
 
     // Function to find text node and offset
     const findTextNodeAndOffset = (node: Node, targetOffset: number): { node: Text | null; offset: number } => {
       let currentOffset = 0;
 
-      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, null);
+      const walker = window.document.createTreeWalker(node, NodeFilter.SHOW_TEXT, null);
       let currentNode: Text | null = walker.nextNode() as Text;
 
       while (currentNode) {
@@ -144,17 +142,17 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
     // Apply highlights
     for (const flag of sortedFlags) {
       try {
-        const { node: startNode, offset: startOffset } = findTextNodeAndOffset(doc.body, flag.startOffset);
-        const { node: endNode, offset: endOffset } = findTextNodeAndOffset(doc.body, flag.endOffset);
+        const { node: startNode, offset: startOffset } = findTextNodeAndOffset(div, flag.startOffset);
+        const { node: endNode, offset: endOffset } = findTextNodeAndOffset(div, flag.endOffset);
 
         if (startNode && endNode) {
-          const range = document.createRange();
+          const range = window.document.createRange();
           range.setStart(startNode, startOffset);
           range.setEnd(endNode, endOffset);
 
           // Verify the text matches before applying highlight
           if (range.toString() === flag.text) {
-            const mark = document.createElement('mark');
+            const mark = window.document.createElement('mark');
             mark.style.backgroundColor = `${flag.color}20`;
             mark.style.boxShadow = `inset 0 -2px 0 ${flag.color}`;
             mark.style.borderRadius = '2px';
@@ -171,7 +169,7 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
       }
     }
 
-    return doc.body.innerHTML;
+    return div.innerHTML;
   };
 
   if (documentError || flagsError) {
@@ -187,7 +185,7 @@ export default function DocumentViewer({ onTextSelect }: DocumentViewerProps) {
     );
   }
 
-  if (documentLoading || flagsLoading || !document) {
+  if (documentLoading || flagsLoading || !documentData) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-4 w-full" />

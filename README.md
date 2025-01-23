@@ -14,20 +14,15 @@ A professional-grade web-based document review application designed to enhance t
 - 📥 **Import Support**: Import flags from CSV files
 - 🎨 **Visual Highlighting**: Clear visual indicators for flagged text with color coding
 - 📱 **Responsive Design**: Works seamlessly on desktop and mobile devices
-- 📎 **MS Word Integration**: Direct integration with Microsoft Word (coming soon)
 
-## Tech Stack
+## Quick Installation (Windows)
 
-- **Frontend**: React with TypeScript
-- **Backend**: Express.js
-- **Database**: PostgreSQL with Drizzle ORM
-- **Styling**: Tailwind CSS + shadcn/ui components
-- **Document Processing**: 
-  - `docx` for Word document generation
-  - `csv-parse/stringify` for CSV handling
-  - `pdfkit` for PDF generation
+1. Download the latest release `document-review-app-installer.exe` from the releases page
+2. Run the installer and follow the setup wizard
+3. Launch the application from the Start Menu or Desktop shortcut
+4. Access the application at `http://localhost:5000` in your web browser
 
-## Installation
+## Manual Installation
 
 ### Prerequisites
 
@@ -79,28 +74,36 @@ A professional-grade web-based document review application designed to enhance t
    npm start
    ```
 
-## MS Word Integration (Coming Soon)
+## Creating Installation Package
 
-The application will support direct integration with Microsoft Word through:
+To create an installation package for distribution:
 
-1. **Word Add-in Integration**:
-   - Import documents directly from Word
-   - Export flags and annotations back to Word
-   - Real-time synchronization with Word documents
+1. Install the packaging dependencies:
+   ```bash
+   npm install -g @vercel/ncc pkg
+   ```
 
-2. **Python Bridge** (Alternative Implementation):
-   - A companion Python application that bridges MS Word and the web app
-   - Handles document conversion and synchronization
-   - Supports offline document processing
+2. Bundle the application:
+   ```bash
+   # Bundle frontend
+   npm run build
 
-### Setting up Word Integration
+   # Bundle backend
+   ncc build server/index.ts -o dist/server
+   ```
 
-Instructions for setting up Word integration will be provided once the feature is released. The integration will support:
+3. Create executable:
+   ```bash
+   pkg . --targets node18-win-x64 --output document-review-app.exe
+   ```
 
-- Document import/export
-- Real-time flag synchronization
-- Version control
-- Collaborative editing
+4. Package with dependencies:
+   ```bash
+   # Run the packaging script
+   node scripts/create-installer.js
+   ```
+
+The installer will be created in the `dist` directory as `document-review-app-installer.exe`
 
 ## Usage Guide
 
@@ -120,29 +123,6 @@ Instructions for setting up Word integration will be provided once the feature i
 - **Export Flags**: Export your flags in CSV, PDF, or DOCX format
 - **Import Flags**: Import previously exported flags from CSV files
 
-## Development
-
-### Project Structure
-
-```
-├── client/              # Frontend React application
-│   ├── src/
-│   │   ├── components/  # React components
-│   │   ├── hooks/      # Custom React hooks
-│   │   ├── lib/        # Utility functions
-│   │   └── pages/      # Page components
-├── db/                  # Database schema and configuration
-├── server/             # Express.js backend
-└── migrations/         # Database migrations
-```
-
-### Available Scripts
-
-- `npm run dev`: Start development server
-- `npm run build`: Build for production
-- `npm run db:push`: Update database schema
-- `npm run check`: Type-check TypeScript files
-
 ## Troubleshooting
 
 ### Common Issues
@@ -156,19 +136,6 @@ Instructions for setting up Word integration will be provided once the feature i
    - Clear node_modules and reinstall: `rm -rf node_modules && npm install`
    - Verify Node.js version: `node --version`
    - Check for TypeScript errors: `npm run check`
-
-3. **Word Integration Issues**:
-   - Verify MS Word is installed and accessible
-   - Check file permissions
-   - Ensure proper version compatibility
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a new Pull Request
 
 ## License
 
