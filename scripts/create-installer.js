@@ -22,11 +22,14 @@ function copyFiles() {
     'README.md',
     'LICENSE',
     '.env.example',
+    'scripts/deployment-wizard.js'
   ];
 
   for (const file of filesToCopy) {
     if (fs.existsSync(file)) {
-      fs.copyFileSync(file, path.join(config.bundleDir, file));
+      const targetPath = path.join(config.bundleDir, file);
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      fs.copyFileSync(file, targetPath);
     }
   }
 }
@@ -44,20 +47,14 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Install dependencies
-npm install
-
-REM Setup database
-echo Setting up database...
-npm run db:push
-
-REM Build the application
-echo Building the application...
-npm run build
+REM Run the deployment wizard
+node scripts/deployment-wizard.js
+if errorlevel 1 (
+    echo Installation failed. Please check the error messages above.
+    exit /b 1
+)
 
 echo Installation complete!
-echo You can now start the application with: npm start
-echo Access the application at: http://localhost:5000
 pause
   `;
 
