@@ -1,96 +1,64 @@
-# Document Review Application
+# Document Review Word Add-in
 
-A professional-grade web-based document review application designed to enhance text analysis and collaboration through advanced annotation capabilities. This application provides a comprehensive document management system with intelligent text processing, supporting robust installation and deployment workflows.
+A Microsoft Word add-in that helps you review and annotate documents with color-coded flags.
 
-## Features
+## Quick Installation Guide
 
-- 📝 **Document Viewer**: Clean and responsive interface for document viewing
-- 🚩 **Text Flagging**: Select and flag text with different colors (red, yellow, green)
-- 🔍 **Filtering**: Filter flags by color and sort by newest, oldest, or text content
-- 📤 **Export Options**: Export flagged content in multiple formats:
-  - CSV for data analysis
-  - PDF for sharing and printing
-  - Word (DOCX) for further editing
-- 📥 **Import Support**: Import flags from CSV files
-- 🎨 **Visual Highlighting**: Clear visual indicators for flagged text with color coding
-- 📱 **Responsive Design**: Works seamlessly on desktop and mobile devices
+### Step 1: Download
+1. Download the latest `document-review-word-addin.zip` from the Releases page
+2. Extract the zip file to any folder on your computer
 
-## Quick Installation
-
-1. Download the latest release `document-review-app.zip` from the releases page
-2. Extract the zip file to your desired location
-3. Open a command prompt/terminal in the extracted folder
-4. Run the `install.bat` file (Windows) or `node scripts/deployment-wizard.js` (macOS/Linux)
-5. Follow the deployment wizard prompts:
-   - The wizard will check for Node.js installation
-   - Enter your PostgreSQL database connection details
-   - Choose a port for the application (default: 5000)
-   - The wizard will automatically:
-     - Set up environment variables
-     - Install dependencies
-     - Initialize the database
-     - Prepare the application for first use
-6. Once installation is complete, you can:
-   - Start the development server: `npm run dev`
-   - Build and start in production: `npm run build && npm start`
-   - Access the application at: `http://localhost:<your-chosen-port>`
-
-## Manual Installation
-
-### Prerequisites
-
-1. Node.js 18 or higher
-2. PostgreSQL database
-3. Git
-
-### Step-by-Step Installation
-
-1. Clone the repository:
-   ```bash
-   git clone <your-repo-url>
-   cd document-review-app
+### Step 2: Install
+1. Open Command Prompt (Windows) or Terminal (Mac)
+2. Navigate to the extracted folder:
    ```
-
-2. Install dependencies:
-   ```bash
-   npm install
+   cd path/to/extracted/folder
    ```
+3. Run the installer:
+   - Windows: Double-click `install.bat`
+   - Mac/Linux: Type `node scripts/deployment-wizard.js`
+4. Follow the prompts:
+   - The wizard will check if you have Node.js installed
+   - Enter database details when asked
+   - Accept the default port (5000) or choose another if it's in use
 
-3. Set up environment variables:
-   Create a `.env` file in the root directory with:
-   ```
-   DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<database>
-   ```
+### Step 3: Add to Word
+1. Open Microsoft Word
+2. Click the **Insert** tab
+3. Click **Office Add-ins**
+4. Select **My Add-ins** from the dropdown
+5. Look for "Document Review Add-in" and click **Add**
 
-4. Set up the database:
-   ```bash
-   npm run db:push
-   ```
+## Using the Add-in
 
-5. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-6. Access the application:
-   Open `http://localhost:5000` in your browser
-
-### Production Deployment
-
-1. Build the application:
-   ```bash
-   npm run build
-   ```
-
-2. Start the production server:
-   ```bash
-   npm start
-   ```
+1. Open any document in Word
+2. In the Review tab, click "Document Review" to open the add-in panel
+3. Select text in your document
+4. Click "Get Selected Text" in the add-in panel
+5. Choose a flag color (Yellow, Green, or Red)
+6. The selected text will be highlighted in your chosen color
 
 ## Troubleshooting
 
-### Common Issues
+### Add-in Not Appearing?
+1. Check that the installation completed successfully
+2. Make sure Word is fully closed and reopened after installation
+3. Try running the server manually:
+   ```
+   npm run dev
+   ```
 
+### Installation Errors?
+1. Make sure Node.js 18 or higher is installed
+   - Download from: https://nodejs.org
+2. Check that Microsoft Word is installed
+3. Try running the installer again
+
+### Still Having Issues?
+- Check the detailed installation guide in `INSTALL.md`
+- Submit an issue on GitHub
+
+### Common Issues
 1. **Database Connection Issues**:
    - Verify PostgreSQL is running
    - Check DATABASE_URL environment variable format:
@@ -136,7 +104,6 @@ A professional-grade web-based document review application designed to enhance t
      ```
 
 ### Verification Steps
-
 After installation, verify:
 1. Database connection is working
 2. Application starts without errors
