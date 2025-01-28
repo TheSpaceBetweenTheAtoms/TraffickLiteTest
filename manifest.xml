@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" 
+  xsi:type="TaskPaneApp">
+  <Id>6389CB64-D528-435F-A120-1B33AF139CE7</Id>
+  <Version>1.0.0</Version>
+  <ProviderName>Document Review</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Document Review Add-in"/>
+  <Description DefaultValue="Review and annotate documents directly in Microsoft Word"/>
+  <IconUrl DefaultValue="https://localhost:5000/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://localhost:5000/assets/icon-64.png"/>
+  <SupportUrl DefaultValue="https://github.com/yourusername/document-review-app"/>
+  <Hosts>
+    <Host Name="Document"/>
+  </Hosts>
+  <Requirements>
+    <Sets DefaultMinVersion="1.1">
+      <Set Name="WordApi" MinVersion="1.1"/>
+    </Sets>
+  </Requirements>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://localhost:5000/taskpane.html"/>
+    <RequestedWidth>350</RequestedWidth>
+    <RequestedHeight>650</RequestedHeight>
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+</OfficeApp>

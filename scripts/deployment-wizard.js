@@ -4,6 +4,7 @@ import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
 import net from 'net';
+import os from 'os';
 
 const execAsync = promisify(exec);
 
@@ -53,7 +54,6 @@ class DeploymentWizard {
 
   async checkDatabaseConnection(dbUrl) {
     try {
-      // Only validate URL format for now
       new URL(dbUrl);
       return true;
     } catch (error) {
@@ -99,11 +99,60 @@ class DeploymentWizard {
     }
   }
 
+  async setupWordAddIn() {
+    console.log('\n📎 Setting up Word Add-in...');
+    try {
+      const homedir = os.homedir();
+      let addInFolder;
+
+      if (process.platform === 'win32') {
+        addInFolder = path.join(homedir, 'AppData', 'Local', 'Microsoft', 'Office', 'Word', 'WEF');
+      } else if (process.platform === 'darwin') {
+        addInFolder = path.join(homedir, 'Library', 'Containers', 'com.microsoft.Word', 'Data', 'Documents', 'wef');
+      } else {
+        console.log('\x1b[33m⚠ Your platform is not supported for Word Add-in installation\x1b[0m');
+        return false;
+      }
+
+      await fs.mkdir(addInFolder, { recursive: true });
+
+      await fs.copyFile(
+        path.join(process.cwd(), 'manifest.xml'),
+        path.join(addInFolder, 'document-review-addin.xml')
+      );
+
+      console.log('\x1b[32m✓ Word Add-in installed successfully\x1b[0m');
+      return true;
+    } catch (error) {
+      console.error('\x1b[31m❌ Failed to setup Word Add-in:', error.message, '\x1b[0m');
+      return false;
+    }
+  }
+
+  async generateSelfSignedCert() {
+    console.log('\n🔒 Generating SSL certificate for Add-in...');
+    try {
+      const certPath = path.join(process.cwd(), 'ssl');
+      await fs.mkdir(certPath, { recursive: true });
+
+      if (process.platform === 'win32') {
+        await execAsync('powershell -Command "New-SelfSignedCertificate -DnsName localhost -CertStoreLocation cert:\\LocalMachine\\My"');
+      } else {
+        await execAsync(`openssl req -x509 -newkey rsa:2048 -keyout ${path.join(certPath, 'key.pem')} -out ${path.join(certPath, 'cert.pem')} -days 365 -nodes -subj "/CN=localhost"`);
+      }
+
+      console.log('\x1b[32m✓ SSL certificate generated\x1b[0m');
+      return true;
+    } catch (error) {
+      console.error('\x1b[31m❌ Failed to generate SSL certificate:', error.message, '\x1b[0m');
+      return false;
+    }
+  }
+
   async run() {
     try {
-      console.log('\x1b[32m=== Document Review App Deployment Wizard ===\x1b[0m\n');
+      console.log('\x1b[32m=== Document Review Word Add-in Deployment Wizard ===\x1b[0m\n');
 
-      // Step 1: Check Node.js version
       console.log('📋 Checking system requirements...');
       if (!await this.verifyNodeVersion()) {
         console.error('\x1b[31m❌ Node.js 18 or higher is required.\x1b[0m');
@@ -112,7 +161,6 @@ class DeploymentWizard {
       }
       console.log('\x1b[32m✓ Node.js version check passed\x1b[0m');
 
-      // Step 2: Check write permissions
       const currentDir = process.cwd();
       if (!await this.validatePath(currentDir)) {
         console.error('\x1b[31m❌ No write permission in the current directory\x1b[0m');
@@ -120,7 +168,6 @@ class DeploymentWizard {
       }
       console.log('\x1b[32m✓ Directory permissions verified\x1b[0m');
 
-      // Step 3: Database Configuration
       console.log('\n📦 Database Configuration');
       let dbUrl;
       let isValidDb = false;
@@ -135,7 +182,6 @@ class DeploymentWizard {
       } while (!isValidDb);
       console.log('\x1b[32m✓ Database URL format validated\x1b[0m');
 
-      // Step 4: Port Configuration
       console.log('\n🔌 Port Configuration');
       let port;
       let isPortAvailable = false;
@@ -149,7 +195,6 @@ class DeploymentWizard {
       } while (!isPortAvailable);
       console.log('\x1b[32m✓ Port availability confirmed\x1b[0m');
 
-      // Step 5: Create environment file
       console.log('\n📝 Creating environment configuration...');
       try {
         await fs.writeFile('.env', `DATABASE_URL=${dbUrl}\nPORT=${port}\n`);
@@ -159,19 +204,16 @@ class DeploymentWizard {
         return false;
       }
 
-      // Step 6: Install dependencies
       if (!await this.setupNpmDependencies()) {
         return false;
       }
       console.log('\x1b[32m✓ Dependencies installed\x1b[0m');
 
-      // Step 7: Run database migrations
       if (!await this.setupDatabase()) {
         return false;
       }
       console.log('\x1b[32m✓ Database setup completed\x1b[0m');
 
-      // Step 8: Build the application
       console.log('\n🏗️ Building the application...');
       try {
         await execAsync('npm run build');
@@ -181,11 +223,24 @@ class DeploymentWizard {
         return false;
       }
 
+      // Generate SSL certificate
+      if (!await this.generateSelfSignedCert()) {
+        return false;
+      }
+
+      // Setup Word Add-in
+      if (!await this.setupWordAddIn()) {
+        return false;
+      }
+
+
       console.log('\n\x1b[32m=== Deployment Complete! ===\x1b[0m');
-      console.log('\nYou can now:');
-      console.log('1. Start the application in development mode: npm run dev');
-      console.log('2. Build and start in production mode: npm run build && npm start');
-      console.log(`\nAccess the application at: http://localhost:${port || 5000}\n`);
+      console.log('\nTo use the Word Add-in:');
+      console.log('1. Start the application server: npm run dev');
+      console.log('2. Open Microsoft Word');
+      console.log('3. Go to Insert > Office Add-ins > My Add-ins');
+      console.log('4. Look for "Document Review Add-in" under Custom Add-ins');
+      console.log('\nNote: You may need to trust the SSL certificate in your browser and Word.\n');
 
       return true;
     } catch (error) {
@@ -197,6 +252,5 @@ class DeploymentWizard {
   }
 }
 
-// Run the wizard
 const wizard = new DeploymentWizard();
 wizard.run().then(success => process.exit(success ? 0 : 1));

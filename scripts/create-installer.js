@@ -5,10 +5,10 @@ import archiver from 'archiver';
 
 // Configuration
 const config = {
-  appName: 'Document Review App',
+  appName: 'Document Review Word Add-in',
   version: '1.0.0',
   bundleDir: 'dist',
-  outputFile: 'document-review-app.zip',
+  outputFile: 'document-review-word-addin.zip',
 };
 
 // Ensure dist directory exists
@@ -23,6 +23,7 @@ const filesToCopy = [
   'LICENSE',
   '.env.example',
   'scripts/deployment-wizard.js',
+  'manifest.xml',
   'tsconfig.json',
   'vite.config.ts',
   'tailwind.config.ts',
@@ -57,6 +58,13 @@ REM Check for Node.js
 node --version > nul 2>&1
 if errorlevel 1 (
     echo Node.js is not installed. Please install Node.js 18 or higher.
+    exit /b 1
+)
+
+REM Check for Microsoft Word
+reg query "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Office\\ClickToRun\\Configuration" /v "VersionToReport" > nul 2>&1
+if errorlevel 1 (
+    echo Microsoft Word is not installed.
     exit /b 1
 )
 
