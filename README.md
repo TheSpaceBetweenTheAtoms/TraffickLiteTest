@@ -1,6 +1,6 @@
 # Document Review Application
 
-A professional-grade web-based document review application designed to enhance text analysis and collaboration through advanced annotation capabilities. This application provides a comprehensive document management system with intelligent text flagging, filtering, and export functionality.
+A professional-grade web-based document review application designed to enhance text analysis and collaboration through advanced annotation capabilities. This application provides a comprehensive document management system with intelligent text processing, supporting robust installation and deployment workflows.
 
 ## Features
 
@@ -93,24 +93,56 @@ A professional-grade web-based document review application designed to enhance t
 
 1. **Database Connection Issues**:
    - Verify PostgreSQL is running
-   - Check DATABASE_URL environment variable
+   - Check DATABASE_URL environment variable format:
+     ```
+     postgresql://username:password@hostname:5432/database_name
+     ```
    - Ensure database user has proper permissions
+   - Test connection using psql command line tool
+   - Common error: "password authentication failed" - verify credentials
+   - Common error: "database does not exist" - create database first
 
 2. **Port Already in Use**:
    - The wizard will automatically detect if the default port (5000) is in use
    - You can specify a different port during installation
-   - Alternatively, check and stop any processes using port 5000
+   - To check what's using port 5000:
+     - Windows: `netstat -ano | findstr :5000`
+     - Linux/Mac: `lsof -i :5000`
+   - Stop the conflicting process or choose another port
 
 3. **Installation Wizard Errors**:
    - If the wizard fails, check the error messages displayed
-   - Verify that Node.js is installed correctly
+   - Verify that Node.js is installed correctly:
+     ```bash
+     node --version  # Should be 18.x or higher
+     ```
    - Ensure you have proper permissions to write to the installation directory
-   - Check your database credentials
+   - Check your database credentials with psql before running the wizard
+   - If seeing "command not found", ensure you're in the correct directory
 
 4. **Build Errors**:
    - Clear node_modules and reinstall: `rm -rf node_modules && npm install`
    - Verify Node.js version: `node --version`
    - Check for TypeScript errors: `npm run check`
+   - Common error: "Cannot find module" - Clear npm cache:
+     ```bash
+     npm cache clean --force
+     npm install
+     ```
+   - For "out of memory" errors, increase Node.js memory limit:
+     ```bash
+     export NODE_OPTIONS=--max-old-space-size=4096  # Linux/Mac
+     set NODE_OPTIONS=--max-old-space-size=4096     # Windows
+     ```
+
+### Verification Steps
+
+After installation, verify:
+1. Database connection is working
+2. Application starts without errors
+3. Can access the web interface
+4. Can perform basic operations (create/view documents)
+5. Export functionality works for all formats
 
 ## License
 
