@@ -20,42 +20,11 @@ class DeploymentWizard {
     });
   }
 
-  async checkPort(port) {
-    return new Promise((resolve) => {
-      const server = net.createServer();
-      server.once('error', () => {
-        resolve(false);
-      });
-      server.once('listening', () => {
-        server.close();
-        resolve(true);
-      });
-      server.listen(port);
-    });
-  }
-
-  async askQuestion(question) {
-    if (!this.rl) {
-      await this.initialize();
-    }
-    const answer = await this.rl.question(`\x1b[36m${question}\x1b[0m `);
-    return answer.trim();
-  }
-
   async verifyNodeVersion() {
     try {
       const { stdout } = await execAsync('node --version');
       const version = parseInt(stdout.match(/v(\d+)/)[1]);
       return version >= 18;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  async checkDatabaseConnection(dbUrl) {
-    try {
-      new URL(dbUrl);
-      return true;
     } catch (error) {
       return false;
     }
@@ -77,17 +46,6 @@ class DeploymentWizard {
       return true;
     } catch (error) {
       console.error('\x1b[31m❌ Failed to install dependencies:', error.message, '\x1b[0m');
-      return false;
-    }
-  }
-
-  async setupDatabase() {
-    console.log('\n🔄 Setting up database...');
-    try {
-      await execAsync('npm run db:push');
-      return true;
-    } catch (error) {
-      console.error('\x1b[31m❌ Database setup failed:', error.message, '\x1b[0m');
       return false;
     }
   }
@@ -168,51 +126,12 @@ class DeploymentWizard {
       }
       console.log('\x1b[32m✓ Directory permissions verified\x1b[0m');
 
-      console.log('\n📦 Database Configuration');
-      let dbUrl;
-      let isValidDb = false;
-      do {
-        dbUrl = await this.askQuestion(
-          'Enter your PostgreSQL database URL (format: postgresql://user:password@host:port/database):'
-        );
-        isValidDb = await this.checkDatabaseConnection(dbUrl);
-        if (!isValidDb) {
-          console.error('\x1b[31m❌ Invalid database URL format. Please try again.\x1b[0m');
-        }
-      } while (!isValidDb);
-      console.log('\x1b[32m✓ Database URL format validated\x1b[0m');
-
-      console.log('\n🔌 Port Configuration');
-      let port;
-      let isPortAvailable = false;
-      do {
-        port = await this.askQuestion('Enter the port to run the application (default: 5000):');
-        const portNumber = parseInt(port) || 5000;
-        isPortAvailable = await this.checkPort(portNumber);
-        if (!isPortAvailable) {
-          console.error(`\x1b[31m❌ Port ${portNumber} is already in use. Please choose another port.\x1b[0m`);
-        }
-      } while (!isPortAvailable);
-      console.log('\x1b[32m✓ Port availability confirmed\x1b[0m');
-
-      console.log('\n📝 Creating environment configuration...');
-      try {
-        await fs.writeFile('.env', `DATABASE_URL=${dbUrl}\nPORT=${port}\n`);
-        console.log('\x1b[32m✓ Environment configuration created\x1b[0m');
-      } catch (error) {
-        console.error('\x1b[31m❌ Failed to create environment configuration:', error.message, '\x1b[0m');
-        return false;
-      }
 
       if (!await this.setupNpmDependencies()) {
         return false;
       }
       console.log('\x1b[32m✓ Dependencies installed\x1b[0m');
 
-      if (!await this.setupDatabase()) {
-        return false;
-      }
-      console.log('\x1b[32m✓ Database setup completed\x1b[0m');
 
       console.log('\n🏗️ Building the application...');
       try {

@@ -21,7 +21,6 @@ const filesToCopy = [
   'package.json',
   'README.md',
   'LICENSE',
-  '.env.example',
   'scripts/deployment-wizard.js',
   'manifest.xml',
   'tsconfig.json',
@@ -29,9 +28,6 @@ const filesToCopy = [
   'tailwind.config.ts',
   'postcss.config.js',
   'theme.json',
-  'drizzle.config.ts',
-  'db/schema.ts',
-  'db/index.ts',
 ];
 
 // Copy necessary files
